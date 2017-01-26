@@ -7,18 +7,14 @@
 #include<unistd.h>
 #include<pthread.h>
 
-#define thread_count 1000
 #define STR_LEN 1000
 
 int NUM_STR; 
 char** theArray;
-unsigned int* seed;
 pthread_mutex_t mutex;
 
-void initSeed();
 void initArray();
 void *ServerEcho(void *args);
-void *Operate(void* rank);  /* Thread function */
 
 // command line arguements 
 int main(int argc, char* argv[])
@@ -29,7 +25,6 @@ int main(int argc, char* argv[])
 	}
 
 	NUM_STR = atoi(argv[2]); // number of strings in the array
-	initSeed();
 	initArray();
 
 	struct sockaddr_in sock_var;
@@ -76,14 +71,6 @@ void *ServerEcho(void *args)
 	return NULL;
 }
 
-void initSeed() {
-	seed = malloc(thread_count*sizeof(int));
-
-	int i;
-	for (i = 0; i < thread_count; i++)
-		seed[i] = i;
-}
-
 void initArray() {
 	// initialize the array with number of strings
 	theArray = malloc(NUM_STR*sizeof(char[STR_LEN]));
@@ -92,24 +79,4 @@ void initArray() {
 	for(i = 0; i < NUM_STR; i++) {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
 	}
-}
-
-void *Operate(void* rank) {
-	long my_rank = (long) rank;
-	
-	// Find a random position in theArray for read or write
-	int pos = rand_r(&seed[my_rank]) % NUM_STR;
-	int randNum = rand_r(&seed[my_rank]) % 100;	// write with 5% probability
-	
-	pthread_mutex_lock(&mutex); 
-
-	if (randNum >= 95) // 95% are write operations, others are reads
-		sprintf(theArray[pos], "theArray[%d] modified by thread %ld", pos, my_rank);
-
-	printf("Thread %ld: randNum = %d\n", my_rank, randNum);
-	printf("%s\n\n", theArray[pos]); // return the value read or written
-
-	pthread_mutex_unlock(&mutex);
-		
-	return NULL;
 }
