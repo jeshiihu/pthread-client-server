@@ -6,8 +6,10 @@
 #include<arpa/inet.h>
 #include<unistd.h>
 #include<pthread.h>
+#include<string.h>
 
 #define STR_LEN 1000
+#define string_length 100
 
 int NUM_STR; 
 char** theArray;
@@ -39,7 +41,8 @@ int main(int argc, char* argv[])
 	if(bind(serverFileDescriptor,(struct sockaddr*)&sock_var,sizeof(sock_var))>=0)
 	{
 		printf("\nsocket has been created");
-		listen(serverFileDescriptor,2000); 
+		listen(serverFileDescriptor,2000);
+		pthread_mutex_init(&mutex, NULL); 
 		while(1)        //loop infinity
 		{
 			for(i=0;i<20;i++)      //can support 20 clients at a time
@@ -54,26 +57,43 @@ int main(int argc, char* argv[])
 	else{
 		printf("\nsocket creation failed\n");
 	}
+	pthread_mutex_destroy(&mutex);
+	//free(t);
 	return 0;
 }
 
 void *ServerEcho(void *args)
 {
 	int clientFileDescriptor=(int)args;
-	char str[40];
+	int requested_string;
+	int received_pos;
+	char str[string_length];
+	char read_buf[] = "read";
+	char write_buf[] = "write";
 
-	read(clientFileDescriptor,str,40);
+
+	read(clientFileDescriptor,str,string_length);
 	printf("\nreading from client: %s",str);
-	if(strcmp(str, "read") == 0) {
-		write(clientFileDescriptor,str,40);	// array stuff
+
+	pthread_mutex_lock(&mutex);
+
+	if(strcmp(str, read_buf) == 0) {
+		read(clientFileDescriptor, &requested_string, sizeof(requested_string));
+		received_pos = ntohl(requested_string);
+		printf("received_pos is: %d\n", received_pos);
+		write(clientFileDescriptor,theArray[received_pos],string_length);	// array stuff
 	}
-	else {
-		printf("\nGot out of the if");
-		write(clientFileDescriptor,str,40);
+	else if(strcmp(str, write_buf) == 0) {
+		printf("\nGot a write");
+		read(clientFileDescriptor, &requested_string, sizeof(requested_string));
+		received_pos = ntohl(requested_string);
+		sprintf(theArray[received_pos], "String %d has been modified by a write request", received_pos);
+		write(clientFileDescriptor,theArray[received_pos],string_length);
 		printf("\nGot through the write");
 		printf("\nechoing back to client: %s", str);
 	}
 
+	pthread_mutex_unlock(&mutex);
 	close(clientFileDescriptor);
 	
 
@@ -87,5 +107,7 @@ void initArray() {
 	int i;
 	for(i = 0; i < NUM_STR; i++) {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
+		sprintf(theArray[i], "theArray[%d]: initial value", i);
 	}
+
 }

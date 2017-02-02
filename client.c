@@ -8,6 +8,7 @@
 #include<pthread.h>
 
 #define thread_count 3
+#define string_length 100
 
 int NUM_STR, PORT;
 unsigned int* seed;
@@ -83,10 +84,12 @@ void *Operate(void* rank) {
 
 	// Find a random position in theArray for read or write
 	int pos = rand_r(&seed[my_rank]) % NUM_STR;
+	int converted_pos = htonl(pos);
 	int randNum = rand_r(&seed[my_rank]) % 100;	// write with 5% probability
+	//int randNum = 97;
 
 	int clientFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
-	char str_clnt[40], str_ser[40];
+	char str_clnt[string_length], str_ser[string_length];
 
 	struct sockaddr_in sock_var;
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
@@ -99,10 +102,12 @@ void *Operate(void* rank) {
 
 		if (randNum >= 95) { // 5% are write operations, others are reads
 			printf("writinggg fd:%d\n", clientFileDescriptor);
-			snprintf(str_clnt, sizeof(str_clnt), "theArray[%d] modified by thread %ld", pos, my_rank);
-			printf("str: %s\n", str_clnt);
-			write(clientFileDescriptor,str_clnt,40);
-			read(clientFileDescriptor,str_ser,40);
+			//snprintf(str_clnt, sizeof(str_clnt), "theArray[%d] modified by thread %ld", pos, my_rank);
+			//printf("str: %s\n", str_clnt);
+			snprintf(str_clnt, sizeof(str_clnt), "write");
+			write(clientFileDescriptor,str_clnt,6);
+			write(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
+			read(clientFileDescriptor,str_ser,string_length);
 			printf("echo: %s\n", str_ser);
 
 		} else {
@@ -112,9 +117,10 @@ void *Operate(void* rank) {
 			snprintf(str_clnt, sizeof(str_clnt), "read");
 			write(clientFileDescriptor, str_clnt, 5);
 
-			// read from server, value of array
-			read(clientFileDescriptor,str_ser,40);
-			printf("after read\n");
+			write(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
+
+			//reading string from array
+			read(clientFileDescriptor,str_ser,string_length);
 			printf("\nString from Server: %s\n",str_ser);
 		}
 
