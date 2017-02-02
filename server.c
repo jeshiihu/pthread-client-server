@@ -60,13 +60,22 @@ int main(int argc, char* argv[])
 void *ServerEcho(void *args)
 {
 	int clientFileDescriptor=(int)args;
-	char str[20];
+	char str[40];
 
-	read(clientFileDescriptor,str,20);
+	read(clientFileDescriptor,str,40);
 	printf("\nreading from client: %s",str);
-	write(clientFileDescriptor,str,20);
-	printf("\nechoing back to client");
+	if(strcmp(str, "read") == 0) {
+		write(clientFileDescriptor,str,40);	// array stuff
+	}
+	else {
+		printf("\nGot out of the if");
+		write(clientFileDescriptor,str,40);
+		printf("\nGot through the write");
+		printf("\nechoing back to client: %s", str);
+	}
+
 	close(clientFileDescriptor);
+	
 
 	return NULL;
 }
