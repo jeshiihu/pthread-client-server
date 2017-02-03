@@ -9,6 +9,7 @@
 #include<string.h>
 
 #define STR_LEN 1000
+#define THREAD_COUNT 1000
 
 int num_str; 
 char** theArray;
@@ -33,7 +34,10 @@ int main(int argc, char* argv[])
 	int serverFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	int clientFileDescriptor;
 	int i;
-	pthread_t t[20];
+	//pthread_t t[20];
+	pthread_t* t;
+	
+		
 
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
 	sock_var.sin_port=atoi(argv[1]); // port from command line
@@ -45,12 +49,19 @@ int main(int argc, char* argv[])
 		pthread_mutex_init(&mutex, NULL); 
 		while(1)        //loop infinity
 		{
-			for(i=0;i<20;i++)      //can support 20 clients at a time
+			t = malloc(THREAD_COUNT*sizeof(pthread_t));
+			for(i=0;i<THREAD_COUNT;i++)      //can support 20 clients at a time
 			{
 				clientFileDescriptor=accept(serverFileDescriptor,NULL,NULL);
-				printf("Connected to client %d\n",clientFileDescriptor);
-				pthread_create(&t,NULL,ServerEcho,(void *)(uintptr_t)clientFileDescriptor);
+				//printf("Connected to client %d\n",clientFileDescriptor);
+				pthread_create(&t[i],NULL,ServerEcho,(void *)(uintptr_t)clientFileDescriptor);
 			}
+			for(i=0; i<THREAD_COUNT;i++)
+			{	
+				pthread_join(t[i],NULL);
+			}
+			free(t);
+				
 		}
 		close(serverFileDescriptor);
 	}
@@ -75,29 +86,29 @@ void *ServerEcho(void *args)
 
 	// reading the operation from the client
 	read(clientFileDescriptor,operation,STR_LEN);
-	printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
+	//printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
 
 	// lock critical section
 	pthread_mutex_lock(&mutex);
 
 	if(strcmp(operation, read_buf) == 0) {
-		printf("Client %d wants to read...\n", clientFileDescriptor);
+		//printf("Client %d wants to read...\n", clientFileDescriptor);
 		
 		// read the array postion the client wants to read from
 		read(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
 		pos = ntohl(converted_pos);
-		printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
+		//printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
 
 		// send the string at the specified position to the client
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
 	}
 	else if(strcmp(operation, write_buf) == 0) {
-		printf("Client %d wants to write...\n", clientFileDescriptor);
+		//printf("Client %d wants to write...\n", clientFileDescriptor);
 
 		// read the array postion the client wants to write to
 		read(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
 		pos = ntohl(converted_pos);
-		printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
+		//printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
 		
 		// write to the array
 		sprintf(theArray[pos], "String %d has been modified by a write request", pos);
@@ -119,7 +130,7 @@ void initArray() {
 	int i;
 	for(i = 0; i < num_str; i++) {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
-		sprintf(theArray[i], "theArray[%d]: initial value", i);
+		//sprintf(theArray[i], "theArray[%d]: initial value", i);
 	}
 
 }

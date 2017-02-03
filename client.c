@@ -43,7 +43,8 @@ int main(int argc, char* argv[]) {
 		pthread_join(thread_handles[thread], NULL); 
 	GET_TIME(finish);
 	elapsed = finish - start;
-	printf("The elapsed time is %e seconds\n", elapsed);
+	//printf("The elapsed time is %e seconds\n", elapsed);
+	printf("%e\n", elapsed);	
 	free(thread_handles);
 	free(seed);
 
@@ -78,37 +79,37 @@ void *Operate(void* rank) {
 
 	if(connect(clientFileDescriptor,(struct sockaddr*)&sock_var,sizeof(sock_var))>=0)
 	{
-		printf("Client %d has connected to the server!\n",clientFileDescriptor);
+		//printf("Client %d has connected to the server!\n",clientFileDescriptor);
 
 		if (randNum >= 95) { // 5% are write operations, others are reads
-			printf("Client %d is writing...\n", clientFileDescriptor);
+			//printf("Client %d is writing...\n", clientFileDescriptor);
 
 			// send write msg to the server - acts like a flag
 			snprintf(str_clnt, sizeof(str_clnt), "write");
 			write(clientFileDescriptor,str_clnt,STR_LEN);
 
 			// send position num to server (as a network byte order)
-			printf("Client %d wants to write to pos: %d\n", clientFileDescriptor, pos);
+			//printf("Client %d wants to write to pos: %d\n", clientFileDescriptor, pos);
 			write(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
 
 			// read from server - array should be modified
 			read(clientFileDescriptor,str_ser,STR_LEN);
-			printf("Client %d received: %s\n", clientFileDescriptor, str_ser);
+			//printf("Client %d received: %s\n", clientFileDescriptor, str_ser);
 		} 
 		else {
-			printf("Client %d is reading...\n", clientFileDescriptor);
+			//printf("Client %d is reading...\n", clientFileDescriptor);
 
 			// sending read message to let server know if read or write
 			snprintf(str_clnt, sizeof(str_clnt), "read");
 			write(clientFileDescriptor, str_clnt, STR_LEN);
 
 			// send position num to server (as a network byte order)
-			printf("Client %d wants to read to pos: %d\n", clientFileDescriptor, pos);
+			//printf("Client %d wants to read to pos: %d\n", clientFileDescriptor, pos);
 			write(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
 
 			// read from server
 			read(clientFileDescriptor,str_ser,STR_LEN);
-			printf("String from Server: %s\n",str_ser);
+			//printf("String from Server: %s\n",str_ser);
 		}
 
 		close(clientFileDescriptor);
