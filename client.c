@@ -6,8 +6,9 @@
 #include<arpa/inet.h>
 #include<unistd.h>
 #include<pthread.h>
+#include "timer.h"
 
-#define THREAD_COUNT 3
+#define THREAD_COUNT 1000
 #define STR_LEN 1000
 
 int num_str, port;
@@ -20,6 +21,7 @@ int main(int argc, char* argv[]) {
 
 	long       thread;  /* Use long in case of a 64-bit system */
 	pthread_t* thread_handles; 
+	double start, finish, elapsed;
 
 	if(argc != 3) {
 		printf("Error: incorrect number of arguments, please try again\n");
@@ -32,13 +34,16 @@ int main(int argc, char* argv[]) {
 	initSeed();
 
 	thread_handles = malloc(THREAD_COUNT*sizeof(pthread_t)); 
-
+	
+	GET_TIME(start);
 	for (thread = 0; thread < THREAD_COUNT; thread++)  
 		pthread_create(&thread_handles[thread], NULL, Operate, (void*) thread);  
 
 	for (thread = 0; thread < THREAD_COUNT; thread++) 
 		pthread_join(thread_handles[thread], NULL); 
-
+	GET_TIME(finish);
+	elapsed = finish - start;
+	printf("The elapsed time is %e seconds\n", elapsed);
 	free(thread_handles);
 	free(seed);
 
