@@ -9,9 +9,8 @@
 #include<string.h>
 
 #define STR_LEN 1000
-#define string_length 100
 
-int NUM_STR; 
+int num_str; 
 char** theArray;
 pthread_mutex_t mutex;
 
@@ -26,7 +25,8 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	NUM_STR = atoi(argv[2]); // number of strings in the array
+	num_str = atoi(argv[2]); // number of strings in the array
+	
 	initArray();
 
 	struct sockaddr_in sock_var;
@@ -36,11 +36,11 @@ int main(int argc, char* argv[])
 	pthread_t t[20];
 
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
-	sock_var.sin_port=atoi(argv[1]);
+	sock_var.sin_port=atoi(argv[1]); // port from command line
 	sock_var.sin_family=AF_INET;
 	if(bind(serverFileDescriptor,(struct sockaddr*)&sock_var,sizeof(sock_var))>=0)
 	{
-		printf("\nsocket has been created");
+		printf("Socket has been created!\n");
 		listen(serverFileDescriptor,2000);
 		pthread_mutex_init(&mutex, NULL); 
 		while(1)        //loop infinity
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 			for(i=0;i<20;i++)      //can support 20 clients at a time
 			{
 				clientFileDescriptor=accept(serverFileDescriptor,NULL,NULL);
-				printf("\nConnected to client %d\n",clientFileDescriptor);
+				printf("Connected to client %d\n",clientFileDescriptor);
 				pthread_create(&t,NULL,ServerEcho,(void *)(uintptr_t)clientFileDescriptor);
 			}
 		}
@@ -57,55 +57,67 @@ int main(int argc, char* argv[])
 	else{
 		printf("\nsocket creation failed\n");
 	}
+
 	pthread_mutex_destroy(&mutex);
-	//free(t);
 	return 0;
 }
 
 void *ServerEcho(void *args)
 {
 	int clientFileDescriptor=(int)args;
-	int requested_string;
-	int received_pos;
-	char str[string_length];
+	int converted_pos;
+	int pos;
+
+	// used to know whether the client wants to read or write
+	char operation[STR_LEN];
 	char read_buf[] = "read";
 	char write_buf[] = "write";
 
+	// reading the operation from the client
+	read(clientFileDescriptor,operation,STR_LEN);
+	printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
 
-	read(clientFileDescriptor,str,string_length);
-	printf("\nreading from client: %s",str);
-
+	// lock critical section
 	pthread_mutex_lock(&mutex);
 
-	if(strcmp(str, read_buf) == 0) {
-		read(clientFileDescriptor, &requested_string, sizeof(requested_string));
-		received_pos = ntohl(requested_string);
-		printf("received_pos is: %d\n", received_pos);
-		write(clientFileDescriptor,theArray[received_pos],string_length);	// array stuff
+	if(strcmp(operation, read_buf) == 0) {
+		printf("Client %d wants to read...\n", clientFileDescriptor);
+		
+		// read the array postion the client wants to read from
+		read(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
+		pos = ntohl(converted_pos);
+		printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
+
+		// send the string at the specified position to the client
+		write(clientFileDescriptor,theArray[pos],STR_LEN);
 	}
-	else if(strcmp(str, write_buf) == 0) {
-		printf("\nGot a write");
-		read(clientFileDescriptor, &requested_string, sizeof(requested_string));
-		received_pos = ntohl(requested_string);
-		sprintf(theArray[received_pos], "String %d has been modified by a write request", received_pos);
-		write(clientFileDescriptor,theArray[received_pos],string_length);
-		printf("\nGot through the write");
-		printf("\nechoing back to client: %s", str);
+	else if(strcmp(operation, write_buf) == 0) {
+		printf("Client %d wants to write...\n", clientFileDescriptor);
+
+		// read the array postion the client wants to write to
+		read(clientFileDescriptor, &converted_pos, sizeof(converted_pos));
+		pos = ntohl(converted_pos);
+		printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
+		
+		// write to the array
+		sprintf(theArray[pos], "String %d has been modified by a write request", pos);
+		
+		// send the string at the modified position to the client
+		write(clientFileDescriptor,theArray[pos],STR_LEN);
 	}
 
 	pthread_mutex_unlock(&mutex);
 	close(clientFileDescriptor);
-	
 
 	return NULL;
 }
 
 void initArray() {
 	// initialize the array with number of strings
-	theArray = malloc(NUM_STR*sizeof(char[STR_LEN]));
+	theArray = malloc(num_str*sizeof(char[STR_LEN]));
 
 	int i;
-	for(i = 0; i < NUM_STR; i++) {
+	for(i = 0; i < num_str; i++) {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
 		sprintf(theArray[i], "theArray[%d]: initial value", i);
 	}
