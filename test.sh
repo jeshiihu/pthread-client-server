@@ -16,7 +16,7 @@ Duplicates=100
 # Port Number
 port=3000
 # The number of strings in theArray
-arraysize=100
+arraysize=10000
 
 
 clear

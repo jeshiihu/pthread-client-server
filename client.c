@@ -8,7 +8,7 @@
 #include<pthread.h>
 #include "timer.h"
 
-#define THREAD_COUNT 50
+#define THREAD_COUNT 1000
 #define STR_LEN 1000
 
 int num_str, port;
