@@ -1,8 +1,8 @@
 CC = gcc
 
-SOURCES = server.c client.c 
+SOURCES = server.c client.c rwlockserver.c 
 
-all: server client
+all: server client rwserver
 
 server: server.c 
 	gcc -g -Wall -o server server.c -lpthread
@@ -10,8 +10,11 @@ server: server.c
 client: client.c
 	gcc -g -Wall -o client client.c -lpthread
 
+rwserver: rwlockserver.c
+	gcc -g -Wall -o rwserver rwlockserver.c -lpthread
+
 clean:
-	-rm -f *.o server client
+	-rm -f *.o server client rwserver
 
 run:
-	./server ./client
+	./server ./client ./rwserver
