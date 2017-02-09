@@ -7,6 +7,7 @@
 #include<unistd.h>
 #include<pthread.h>
 #include<string.h>
+#include "timer.h"
 
 #define STR_LEN 1000
 #define THREAD_COUNT 1000
@@ -14,6 +15,8 @@
 int num_str; 
 char** theArray;
 pthread_mutex_t mutex;
+double total = 0;
+int counter = 0;
 
 void initArray();
 void *ServerEcho(void *args);
@@ -34,6 +37,7 @@ int main(int argc, char* argv[])
 	int serverFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	int clientFileDescriptor;
 	int i;
+	//double start, finish, elapsed;
 	//pthread_t t[20];
 	pthread_t* t;
 	
@@ -60,6 +64,7 @@ int main(int argc, char* argv[])
 			{	
 				pthread_join(t[i],NULL);
 			}
+
 			free(t);
 				
 		}
@@ -83,11 +88,13 @@ void *ServerEcho(void *args)
 	char operation[STR_LEN];
 	char read_buf[] = "read";
 	char write_buf[] = "write";
+	double start, finish, elapsed ;
 
 	// reading the operation from the client
 	read(clientFileDescriptor,operation,STR_LEN);
 	//printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
 
+	GET_TIME(start);
 	// lock critical section
 	pthread_mutex_lock(&mutex);
 
@@ -116,8 +123,16 @@ void *ServerEcho(void *args)
 		// send the string at the modified position to the client
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
 	}
-
 	pthread_mutex_unlock(&mutex);
+	GET_TIME(finish);
+	elapsed = finish - start;
+	total = total + elapsed;
+	counter++;
+	if (counter == 1000){
+		printf("The elapsed time is %e seconds\n", total);
+		counter = 0;
+		total = 0;
+	}
 	close(clientFileDescriptor);
 
 	return NULL;
@@ -130,7 +145,7 @@ void initArray() {
 	int i;
 	for(i = 0; i < num_str; i++) {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
-		//sprintf(theArray[i], "theArray[%d]: initial value", i);
+		sprintf(theArray[i], "theArray[%d]: initial value", i);
 	}
 
 }

@@ -36,15 +36,18 @@ int main(int argc, char* argv[]) {
 	thread_handles = malloc(THREAD_COUNT*sizeof(pthread_t)); 
 	
 	GET_TIME(start);
-	for (thread = 0; thread < THREAD_COUNT; thread++)  
+	for (thread = 0; thread < THREAD_COUNT; thread++){  
 		pthread_create(&thread_handles[thread], NULL, Operate, (void*) thread);  
+	}
 
-	for (thread = 0; thread < THREAD_COUNT; thread++) 
-		pthread_join(thread_handles[thread], NULL); 
+	for (thread = 0; thread < THREAD_COUNT; thread++){ 
+		pthread_join(thread_handles[thread], NULL);
+	} 
+	
 	GET_TIME(finish);
 	elapsed = finish - start;
 	//printf("The elapsed time is %e seconds\n", elapsed);
-	printf("%e\n", elapsed);	
+	//printf("%e\n", elapsed);	
 	free(thread_handles);
 	free(seed);
 

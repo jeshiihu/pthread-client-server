@@ -7,12 +7,15 @@
 #include<unistd.h>
 #include<pthread.h>
 #include<string.h>
+#include "timer.h"
 
 #define STR_LEN 1000
 #define THREAD_COUNT 1000
 
 int num_str; 
 char** theArray;
+double total = 0;
+int counter = 0;
 
 
 pthread_mutex_t mutex;
@@ -22,7 +25,7 @@ pthread_rwlock_t lock=PTHREAD_RWLOCK_INITIALIZER;
 void initArray();
 void *ServerEcho(void *args);
 
-// command line arguements 
+// command line arguments 
 int main(int argc, char* argv[])
 {
 	if(argc != 3) {
@@ -38,6 +41,8 @@ int main(int argc, char* argv[])
 	int serverFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	int clientFileDescriptor;
 	int i;
+	//double start, finish, elapsed;
+
 	//pthread_t t[20];
 	pthread_t* t;
 	
@@ -49,7 +54,7 @@ int main(int argc, char* argv[])
 		printf("Socket has been created!\n");
 		listen(serverFileDescriptor,2000);
 		while(1)        //loop infinity
-		{
+		{	
 			t = malloc(THREAD_COUNT*sizeof(pthread_t));
 			for(i=0;i<THREAD_COUNT;i++)      //can support 20 clients at a time
 			{
@@ -61,7 +66,6 @@ int main(int argc, char* argv[])
 			{	
 				pthread_join(t[i],NULL);
 			}
-			free(t);
 				
 		}
 		close(serverFileDescriptor);
@@ -76,6 +80,7 @@ int main(int argc, char* argv[])
 
 void *ServerEcho(void *args)
 {
+
 	int clientFileDescriptor=(int)args;
 	int converted_pos;
 	int pos;
@@ -84,14 +89,15 @@ void *ServerEcho(void *args)
 	char operation[STR_LEN];
 	char read_buf[] = "read";
 	char write_buf[] = "write";
-
+	double start, finish, elapsed ;
 	
+
 	// reading the operation from the client
 	read(clientFileDescriptor,operation,STR_LEN);
 	//printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
 	
 
-
+	GET_TIME(start);
 	if(strcmp(operation, read_buf) == 0) {
 		pthread_rwlock_rdlock(&lock);
 		//printf("Client %d wants to read...\n", clientFileDescriptor);
@@ -127,9 +133,17 @@ void *ServerEcho(void *args)
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
 		pthread_rwlock_unlock(&lock);	
 	}
+	GET_TIME(finish);
+	elapsed = finish - start;
+	total = total + elapsed;
+	counter++;
+	if (counter == 1000){
+		printf("The elapsed time is %e seconds\n", total);
+		counter = 0;
+		total = 0;
+	}
 
 	close(clientFileDescriptor);
-
 	return NULL;
 }
 
