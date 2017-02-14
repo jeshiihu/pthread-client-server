@@ -116,11 +116,11 @@ void *ServerEcho(void *args)
 		pthread_rwlock_unlock(&lock);	
 	}
 
+	// append time to total & print when 1000 is reached
 	GET_TIME(finish);
 	elapsed = finish - start;
 	total = total + elapsed;
 	counter++;
-
 	if (counter == 1000) {
 		printf("%e\n", total);
 		counter = 0;

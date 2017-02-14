@@ -30,18 +30,14 @@ int main(int argc, char* argv[])
 	}
 
 	num_str = atoi(argv[2]); // number of strings in the array
-	
 	initArray();
 
 	struct sockaddr_in sock_var;
 	int serverFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	int clientFileDescriptor;
 	int i;
-	//double start, finish, elapsed;
-	//pthread_t t[20];
+
 	pthread_t* t;
-	
-		
 
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
 	sock_var.sin_port=atoi(argv[1]); // port from command line
@@ -54,32 +50,26 @@ int main(int argc, char* argv[])
 		while(1)        //loop infinity
 		{
 			t = malloc(THREAD_COUNT*sizeof(pthread_t));
-			for(i=0;i<THREAD_COUNT;i++)      //can support 20 clients at a time
+			for(i=0;i<THREAD_COUNT;i++)      //can support 1000 clients at a time
 			{
 				clientFileDescriptor=accept(serverFileDescriptor,NULL,NULL);
-				//printf("Connected to client %d\n",clientFileDescriptor);
 				pthread_create(&t[i],NULL,ServerEcho,(void *)(uintptr_t)clientFileDescriptor);
 			}
 			for(i=0; i<THREAD_COUNT;i++)
-			{	
 				pthread_join(t[i],NULL);
-			}
 
-			free(t);
-				
+			free(t); // ensure heap doesn't grow too large
 		}
 		close(serverFileDescriptor);
 	}
-	else{
+	else
 		printf("\nsocket creation failed\n");
-	}
 
 	pthread_mutex_destroy(&mutex);
 	return 0;
 }
 
-void *ServerEcho(void *args)
-{
+void *ServerEcho(void *args) {
 	int clientFileDescriptor=(int)args;
 	int converted_pos;
 	int pos;
@@ -92,11 +82,9 @@ void *ServerEcho(void *args)
 
 	// reading the operation from the client
 	read(clientFileDescriptor,operation,STR_LEN);
-	//printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
 
 	GET_TIME(start);
-	// lock critical section
-	pthread_mutex_lock(&mutex);
+	pthread_mutex_lock(&mutex); // lock critical section
 
 	if(strcmp(operation, read_buf) == 0) {
 		//printf("Client %d wants to read...\n", clientFileDescriptor);
@@ -117,24 +105,25 @@ void *ServerEcho(void *args)
 		pos = ntohl(converted_pos);
 		//printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
 		
-		// write to the array
-		sprintf(theArray[pos], "String %d has been modified by a write request", pos);
-		
+		// write to the array 
 		// send the string at the modified position to the client
+		sprintf(theArray[pos], "String %d has been modified by a write request", pos);
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
 	}
-	pthread_mutex_unlock(&mutex);
-	GET_TIME(finish);
+	pthread_mutex_unlock(&mutex); // unlock to other threads
+	
+	// append time to total & print when 1000 is reached
+	GET_TIME(finish); 
 	elapsed = finish - start;
 	total = total + elapsed;
 	counter++;
-	if (counter == 1000){
-		printf("The elapsed time is %e seconds\n", total);
+	if (counter == 1000) {
+		printf("%e\n", total);
 		counter = 0;
 		total = 0;
 	}
-	close(clientFileDescriptor);
 
+	close(clientFileDescriptor);
 	return NULL;
 }
 
@@ -147,5 +136,4 @@ void initArray() {
 		theArray[i] = malloc(STR_LEN*sizeof(char));
 		sprintf(theArray[i], "theArray[%d]: initial value", i);
 	}
-
 }
