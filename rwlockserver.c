@@ -17,9 +17,7 @@ char** theArray;
 double total = 0;
 int counter = 0;
 
-
 pthread_mutex_t mutex;
-
 pthread_rwlock_t lock=PTHREAD_RWLOCK_INITIALIZER;
 
 void initArray();
@@ -34,16 +32,13 @@ int main(int argc, char* argv[])
 	}
 
 	num_str = atoi(argv[2]); // number of strings in the array
-	
 	initArray();
 
 	struct sockaddr_in sock_var;
 	int serverFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	int clientFileDescriptor;
 	int i;
-	//double start, finish, elapsed;
 
-	//pthread_t t[20];
 	pthread_t* t;
 	
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
@@ -53,26 +48,22 @@ int main(int argc, char* argv[])
 	{
 		printf("Socket has been created!\n");
 		listen(serverFileDescriptor,2000);
-		while(1)        //loop infinity
+		while(1) //loop infinity
 		{	
 			t = malloc(THREAD_COUNT*sizeof(pthread_t));
-			for(i=0;i<THREAD_COUNT;i++)      //can support 20 clients at a time
+			for(i=0;i<THREAD_COUNT;i++) //can support 1000 clients at a time
 			{
 				clientFileDescriptor=accept(serverFileDescriptor,NULL,NULL);
-				//printf("Connected to client %d\n",clientFileDescriptor);
 				pthread_create(&t[i],NULL,ServerEcho,(void *)(uintptr_t)clientFileDescriptor);
 			}
+
 			for(i=0; i<THREAD_COUNT;i++)
-			{	
 				pthread_join(t[i],NULL);
-			}
-				
 		}
 		close(serverFileDescriptor);
 	}
-	else{
+	else
 		printf("\nsocket creation failed\n");
-	}
 
 	pthread_mutex_destroy(&mutex);
 	return 0;
@@ -80,7 +71,6 @@ int main(int argc, char* argv[])
 
 void *ServerEcho(void *args)
 {
-
 	int clientFileDescriptor=(int)args;
 	int converted_pos;
 	int pos;
@@ -89,15 +79,13 @@ void *ServerEcho(void *args)
 	char operation[STR_LEN];
 	char read_buf[] = "read";
 	char write_buf[] = "write";
-	double start, finish, elapsed ;
-	
 
+	double start, finish, elapsed;
+	
 	// reading the operation from the client
 	read(clientFileDescriptor,operation,STR_LEN);
-	//printf("Operation from client %d: %s\n", clientFileDescriptor, operation);
-	
 
-	GET_TIME(start);
+	GET_TIME(start); // start time to avoid adding sockect communication times
 	if(strcmp(operation, read_buf) == 0) {
 		pthread_rwlock_rdlock(&lock);
 		//printf("Client %d wants to read...\n", clientFileDescriptor);
@@ -109,21 +97,15 @@ void *ServerEcho(void *args)
 
 		// send the string at the specified position to the client
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
-		//printf("Got past write on read side \n");
-
-		
-		//printf("got past unlock on read side \n");
 		pthread_rwlock_unlock(&lock);	
 	}
 	else if(strcmp(operation, write_buf) == 0) {
 		pthread_rwlock_wrlock(&lock);		
 		//printf("Client %d wants to write...\n", clientFileDescriptor);
 
-
 		// read the array postion the client wants to write to
 		read(clientFileDescriptor, &converted_pos, sizeof(converted_pos));	
 		pos = ntohl(converted_pos);
-		
 		//printf("Client %d sent pos is: %d\n", clientFileDescriptor, pos);
 
 		// write to the array
@@ -133,12 +115,14 @@ void *ServerEcho(void *args)
 		write(clientFileDescriptor,theArray[pos],STR_LEN);
 		pthread_rwlock_unlock(&lock);	
 	}
+
 	GET_TIME(finish);
 	elapsed = finish - start;
 	total = total + elapsed;
 	counter++;
-	if (counter == 1000){
-		printf("The elapsed time is %e seconds\n", total);
+
+	if (counter == 1000) {
+		printf("%e\n", total);
 		counter = 0;
 		total = 0;
 	}
