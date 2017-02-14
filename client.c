@@ -18,10 +18,8 @@ void initSeed();
 void *Operate(void* rank);
 
 int main(int argc, char* argv[]) {
-
 	long       thread;  /* Use long in case of a 64-bit system */
 	pthread_t* thread_handles; 
-	double start, finish, elapsed;
 
 	if(argc != 3) {
 		printf("Error: incorrect number of arguments, please try again\n");
@@ -30,32 +28,24 @@ int main(int argc, char* argv[]) {
 
 	port = atoi(argv[1]);
 	num_str = atoi(argv[2]); // number of string in array
-	
 	initSeed();
 
+	// malloc the threads, create, join, and free
 	thread_handles = malloc(THREAD_COUNT*sizeof(pthread_t)); 
 	
-	GET_TIME(start);
-	for (thread = 0; thread < THREAD_COUNT; thread++){  
+	for (thread = 0; thread < THREAD_COUNT; thread++)
 		pthread_create(&thread_handles[thread], NULL, Operate, (void*) thread);  
-	}
 
-	for (thread = 0; thread < THREAD_COUNT; thread++){ 
+	for (thread = 0; thread < THREAD_COUNT; thread++)
 		pthread_join(thread_handles[thread], NULL);
-	} 
 	
-	GET_TIME(finish);
-	elapsed = finish - start;
-	//printf("The elapsed time is %e seconds\n", elapsed);
-	//printf("%e\n", elapsed);	
 	free(thread_handles);
 	free(seed);
-
 	return 0;
 }
 
 
-void initSeed() {
+void initSeed() { // init the seed for random number gen
 	seed = malloc(THREAD_COUNT*sizeof(int));
 
 	int i;
@@ -68,13 +58,11 @@ void *Operate(void* rank) {
 
 	// Find a random position in theArray for read or write
 	int pos = rand_r(&seed[my_rank]) % num_str;
-	int converted_pos = htonl(pos);
-
+	int converted_pos = htonl(pos); // convert to network byte to send over socket
 	int randNum = rand_r(&seed[my_rank]) % 100;	// write with 5% probability
-
-	int clientFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	char str_clnt[STR_LEN], str_ser[STR_LEN];
 
+	int clientFileDescriptor=socket(AF_INET,SOCK_STREAM,0);
 	struct sockaddr_in sock_var;
 	sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
 	sock_var.sin_port=port;
@@ -82,11 +70,8 @@ void *Operate(void* rank) {
 
 	if(connect(clientFileDescriptor,(struct sockaddr*)&sock_var,sizeof(sock_var))>=0)
 	{
-		//printf("Client %d has connected to the server!\n",clientFileDescriptor);
-
 		if (randNum >= 95) { // 5% are write operations, others are reads
 			//printf("Client %d is writing...\n", clientFileDescriptor);
-
 			// send write msg to the server - acts like a flag
 			snprintf(str_clnt, sizeof(str_clnt), "write");
 			write(clientFileDescriptor,str_clnt,STR_LEN);
@@ -97,11 +82,10 @@ void *Operate(void* rank) {
 
 			// read from server - array should be modified
 			read(clientFileDescriptor,str_ser,STR_LEN);
-			//printf("Client %d received: %s\n", clientFileDescriptor, str_ser);
+			//printf("Client (write) %d received: %s\n", clientFileDescriptor, str_ser);
 		} 
 		else {
 			//printf("Client %d is reading...\n", clientFileDescriptor);
-
 			// sending read message to let server know if read or write
 			snprintf(str_clnt, sizeof(str_clnt), "read");
 			write(clientFileDescriptor, str_clnt, STR_LEN);
@@ -112,14 +96,13 @@ void *Operate(void* rank) {
 
 			// read from server
 			read(clientFileDescriptor,str_ser,STR_LEN);
-			//printf("String from Server: %s\n",str_ser);
+			//printf("Client (read) %d received: %s\n", clientFileDescriptor, str_ser);
 		}
 
 		close(clientFileDescriptor);
 	}
-	else{
+	else
 		printf("\nsocket creation failed\n");
-	}
 	
 	return 0; 
 }
